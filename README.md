@@ -1,10 +1,3 @@
-<style>
-  code {
-    white-space : pre-wrap !important;
-    word-break: break-word;
-  }
-</style>
-
 ## Overview:
 
 The network integration deliverable of the project involved connecting the existing LoRaWAN gateway and air quality device to AWS infrastructure via IoTCore, Kinesis, S3, Lambda, and RDS.
