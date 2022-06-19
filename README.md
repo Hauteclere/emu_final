@@ -201,7 +201,7 @@ timestring = str(current_time.isoformat()[:-6])
 
 device_info = {
     "air_quality": {
-        "device_ids": DEVICE_IDS
+        "device_ids": AIR_DEVICE_IDS
     },
     "occupancy": {
         "device_ids": OCCUPANCY_DEVICE_IDS
