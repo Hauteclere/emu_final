@@ -1,3 +1,9 @@
+<style>
+code {
+  white-space : pre-wrap !important;
+}
+</style>
+
 ## Overview:
 
 The network integration deliverable of the project involved connecting the existing LoRaWAN gateway and air quality device to AWS infrastructure via IoTCore, Kinesis, S3, Lambda, and RDS.
@@ -150,6 +156,18 @@ import json
 import re
 import hashlib
 
+TIME_INCREMENT = 10
+AIR_DEVICE_IDS = ["eui-a81758fffe0634f4"]
+OCCUPANCY_DEVICE_IDS = []
+THINGSTACK_BEARER_TOKEN = ""
+url = "https://control-data.au1.cloud.thethings.industries/api/v3/as/applications/qut/devices"
+
+def output_data(data_to_output):
+    """Prints data to the terminal by default. This function can be modified by the user, depending on the intended data output system."""
+    print("Gathering data...")
+    print("DATA GATHERED: ")
+    print(data_to_output)
+
 def format_data(input):
     """Takes data from the ThingStack API returns and formats it into a JSON array."""
     
@@ -174,21 +192,19 @@ def format_data(input):
 
 
 headers = {
-    'Authorization': 'Bearer TOKEN_GOES_HERE',
+    'Authorization': f'Bearer {THINGSTACK_BEARER_TOKEN}',
     'Accept': 'text/event-stream',
 }
 
-current_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days = 1)
+current_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes = TIME_INCREMENT)
 timestring = str(current_time.isoformat()[:-6])
-
-url = "https://control-data.au1.cloud.thethings.industries/api/v3/as/applications/qut/devices"
 
 device_info = {
     "air_quality": {
-        "device_ids": ["eui-a81758fffe0634f4"]
+        "device_ids": DEVICE_IDS
     },
     "occupancy": {
-        "device_ids": [...]
+        "device_ids": OCCUPANCY_DEVICE_IDS
     }
 }
 
@@ -199,11 +215,22 @@ for upload, upload_info in device_info.items():
     
     for device in upload_info["device_ids"]:
         data.extend(format_data(requests.get(f'{url}/{device}/packages/storage/uplink_message?after={timestring}Z', headers=headers).text))
-    print("Gathering data...")
-    print("DATA GATHERED: ")
-    print(data)  
+
+    output_data(data)  
 ```
 
 This would allow for an implementation along the following lines:
 
 ![The stopgap stack](./img/stopgap_stack.png)
+
+### Using this integration script:
+
+The script is designed to be deployed as an AWS Lambda function set up to run automatically on a short interval. This allows for multiple devices to be interrogated at once, reducing the lambda uptime required while maintaining data freshness in the user interface.
+
+To apply this integration script, a number of variables need to be set by the user:
+* TIME_INCREMENT: This is a constant value in minutes, defining the recency of the data to pull from Thingstack storage. This should be set to the same increment on which the lambda function runs to avoid loss/duplication of data.
+* AIR_DEVICE_IDS: This list should include the device EUI of each air-quality device that is to be queried. This constant should be updated whenever a new device is brought online.
+* OCCUPANCY_DEVICE_IDS: Similar to the above, this constant should be updated each time a new occupancy measurement device is brought online.
+* THINGSTACK_BEARER_TOKEN: This constant string defines the authentication token the script will use to validate itself with the ThingStack API. This token should be created in the ThinkStack cloud interface, stored using AWS Secrets Manager, and retrived from there at the beginning of the script.
+
+By default, the `output_data()` function is set to print to the terminal, however this is useful only during the testing phase of integration. This function should be modified once connection is established to push or save data to the desired output location. A suggested system is to use the Boto3 library to save data in JSON format to an S3 bucket, triggering a second lambda for pipeline processing.

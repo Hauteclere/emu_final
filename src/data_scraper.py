@@ -1,7 +1,6 @@
 import requests
 import datetime
 import json
-import re
 import hashlib
 
 def format_data(input):
@@ -14,25 +13,28 @@ def format_data(input):
     formatted_data = []
 
     for element in elements:
-        if "decoded_payload" in element["result"]['uplink_message'].keys():
-            formatted_data.append(
-                {
-                    **{key: element["result"]['uplink_message']["decoded_payload"][key] for key in element["result"]['uplink_message']["decoded_payload"].keys() & {"co2", "humidity", "temperature"}},
-                    "measurement_id": int(hashlib.sha1(f'{element["result"]["end_device_ids"]["device_id"]}{element["result"]["uplink_message"]["received_at"]}'.encode("utf-8")).hexdigest(), 16) % (10 ** 16),
-                    "time": element["result"]['uplink_message']["received_at"],
-                    "device_id": element["result"]["end_device_ids"]["device_id"]
-                }
-            )
+        try:
+            if "decoded_payload" in element["result"]['uplink_message'].keys():
+                formatted_data.append(
+                    {
+                        **{key: element["result"]['uplink_message']["decoded_payload"][key] for key in element["result"]['uplink_message']["decoded_payload"].keys() & {"co2", "humidity", "temperature"}},
+                        "measurement_id": int(hashlib.sha1(f'{element["result"]["end_device_ids"]["device_id"]}{element["result"]["uplink_message"]["received_at"]}'.encode("utf-8")).hexdigest(), 16) % (10 ** 16),
+                        "time": element["result"]['uplink_message']["received_at"],
+                        "device_id": element["result"]["end_device_ids"]["device_id"]
+                    }
+                )
+        except:
+            pass
 
     return formatted_data
 
 
 headers = {
-    'Authorization': 'Bearer TOKEN_GOES_HERE',
+    'Authorization': 'Bearer NNSXS.6NP6PQAGTHKHTI52ABIKKTGQSYPMBRLE5FUA53A.SABIGFAW5DS3HOXNQHHIB3W6HSVC6QFXOMHKKFFEHFGM7SX2VQ5Q',
     'Accept': 'text/event-stream',
 }
 
-current_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days = 1)
+current_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes = 20)
 timestring = str(current_time.isoformat()[:-6])
 
 url = "https://control-data.au1.cloud.thethings.industries/api/v3/as/applications/qut/devices"
@@ -41,9 +43,6 @@ device_info = {
     "air_quality": {
         "device_ids": ["eui-a81758fffe0634f4"]
     },
-    "occupancy": {
-        "device_ids": [...]
-    }
 }
 
 for upload, upload_info in device_info.items():
